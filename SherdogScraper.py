@@ -1,17 +1,18 @@
 #!/usr/bin/env python
 import os
-
+from urllib2 import urlopen
 from BeautifulSoup import BeautifulSoup
 
 __author__ = "Jason Harmon (jason@wheelspecs.com)"
 __version__ = "0.0.1"
-__copyright__ = "Copyright (c) 2011 Jason Harmon"
+__copyright__ = "Copyright (c) 2012 Jason Harmon"
 __license__ = "New-style BSD"
 
 class SherdogScraper:
-#	def __init__(self):
+	def __init__(self, logger):
+		self.__logger = logger
 
-	def getEventDetails(sherdogEventID):
+	def getEventDetails(self, sherdogEventID):
 		
 		"""
 		This function will retrieve and return all event details from sherdog.com for a given event ID.
@@ -21,16 +22,16 @@ class SherdogScraper:
 		@return event
 		"""
 
-		log('########## Getting event details ##########')
+		self.__logger.log('########## Getting event details ##########')
 		event = {}
 		event['ID'] = sherdogEventID
-		log('ID: %s' % event['ID'])
+		self.__logger.log('ID: %s' % event['ID'])
 		url = 'http://www.sherdog.com/fightfinder/fightfinder.asp?eventID=%s' % sherdogEventID
-		soup = BeautifulSoup(getHtml(url))
+		soup = BeautifulSoup(self.getHtml(url))
 		event['title'] = soup.find("div", {"class" : "Txt30Blue Bold SpacerLeft8"}).h1.string
-		log('Title: %s' % event['title'])
+		self.__logger.log('Title: %s' % event['title'])
 		event['promotion'] = soup.find("div", {"class" : "Txt13Orange Bold SpacerLeft8"}).a.string
-		log('Promotion: %s' % event['promotion'])
+		self.__logger.log('Promotion: %s' % event['promotion'])
 		tempDate = soup.find("div", {"class" : "Txt13White Bold SpacerLeft8"}).string
 		tempYear = tempDate.split(' ')[2]
 		tempDay = "%.2d" % int(tempDate.split(' ')[1].rstrip(','))
@@ -48,19 +49,19 @@ class SherdogScraper:
 		elif tempMonth == 'November': tempMonth = '11'
 		elif tempMonth == 'December': tempMonth = '12'
 		event['date'] = "%s-%s-%s" % (tempYear, tempMonth, tempDay)
-		log('Date: %s' % event['date'])
+		self.__logger.log('Date: %s' % event['date'])
 		try:
 			event['venue'] = soup.find("div", {"class" : "Txt13Gray Bold SpacerLeftBottom8"}).findAll(text=True)[0].rstrip().rstrip(',')
-			log('Venue: %s' % event['venue'])
+			self.__logger.log('Venue: %s' % event['venue'])
 		except:
 			event['venue'] = ''
-			log('Venue: Not Found')
+			self.__logger.log('Venue: Not Found')
 		try:
 			event['city'] = soup.find("div", {"class" : "Txt13Gray Bold SpacerLeftBottom8"}).findAll(text=True)[1].rstrip().lstrip()
-			log('City: %s' % event['city'])
+			self.__logger.log('City: %s' % event['city'])
 		except:
 			event['city'] = ''
-			log('City: Not Found')
+			self.__logger.log('City: Not Found')
 		table = soup.find("table", {"class" : "fight_event_card"})
 		event['fights'] = []
 		try:
@@ -82,12 +83,12 @@ class SherdogScraper:
 					fight['round'] = cols[5].string
 					fight['time'] = cols[6].string
 					event['fights'].append(fight)
-					log('Fight %s: %s vs. %s' % (fight['ID'], fight['fighter1'], fight['fighter2']))
+					self.__logger.log('Fight %s: %s vs. %s' % (fight['ID'], fight['fighter1'], fight['fighter2']))
 				rowcount = rowcount + 1
 		except:
 			pass
 
-		log('###### Finished getting event details #####')
+		self.__logger.log('###### Finished getting event details #####')
 		return event
 
 	def getFighterDetails(sherdogFighterID):
@@ -100,7 +101,7 @@ class SherdogScraper:
 		@return event
 		"""
 
-		log('######### Getting fighter details #########')
+		self.__logger.log('######### Getting fighter details #########')
 
 		fighter = {}
 		fighter['ID'] = ''
@@ -118,9 +119,9 @@ class SherdogScraper:
 		url = 'http://www.sherdog.com/fightfinder/fightfinder.asp?fighterID=%s' % sherdogFighterID
 
 		fighter['ID'] = sherdogFighterID
-		log('ID: %s' % fighter['ID'])
+		self.__logger.log('ID: %s' % fighter['ID'])
 
-		soup = BeautifulSoup(getHtml(url))
+		soup = BeautifulSoup(self.getHtml(url))
 
 		table = soup.find("span", {"id" : "fighter_profile"})
 		rows = table.findAll('tr')
@@ -130,44 +131,53 @@ class SherdogScraper:
 				continue
 			if infoItem[0].string.rstrip(' ').rstrip('\n') == 'Name':
 				fighter['name'] = infoItem[1].string.rstrip(' ').rstrip('\n')
-				log('Name: %s' % fighter['name'])
+				self.__logger.log('Name: %s' % fighter['name'])
 			if infoItem[0].string.rstrip(' ').rstrip('\n') == 'Nick Name':
 				fighter['nickName'] = infoItem[1].string.rstrip(' ').rstrip('\n')
-				log('Nickname: %s' % fighter['nickName'])
+				self.__logger.log('Nickname: %s' % fighter['nickName'])
 			if infoItem[0].string.rstrip(' ').rstrip('\n') == 'Association':
 				fighter['association'] = infoItem[1].a.string.rstrip(' ').rstrip('\n')
-				log('Association: %s' % fighter['association'])
+				self.__logger.log('Association: %s' % fighter['association'])
 			if infoItem[0].string.rstrip(' ').rstrip('\n') == 'Height':
 				fighter['height'] = infoItem[1].string.rstrip(' ').rstrip('\n')
-				log('Height: %s' % fighter['height'])
+				self.__logger.log('Height: %s' % fighter['height'])
 			if infoItem[0].string.rstrip(' ').rstrip('\n') == 'Weight':
 				fighter['weight'] = infoItem[1].string.rstrip(' ').rstrip('\n')
-				log('Weight: %s' % fighter['weight'])
+				self.__logger.log('Weight: %s' % fighter['weight'])
 			if infoItem[0].string.rstrip(' ').rstrip('\n') == 'Birth Date':
 				fighter['birthYear'] = infoItem[1].string.rstrip(' ').rstrip('\n').split('-')[0]
 				fighter['birthMonth'] = infoItem[1].string.rstrip(' ').rstrip('\n').split('-')[1]
 				fighter['birthDay'] = infoItem[1].string.rstrip(' ').rstrip('\n').split('-')[2]
-				log('DOB: %s-%s-%s' % (fighter['birthDay'], fighter['birthMonth'], fighter['birthYear']))
+				self.__logger.log('DOB: %s-%s-%s' % (fighter['birthDay'], fighter['birthMonth'], fighter['birthYear']))
 			if infoItem[0].string.rstrip(' ').rstrip('\n') == 'City':
 				fighter['city'] = infoItem[1].string.rstrip(' ').rstrip('\n')
-				log('City: %s' % fighter['city'])
+				self.__logger.log('City: %s' % fighter['city'])
 			if infoItem[0].string.rstrip(' ').rstrip('\n') == 'Country':
 				fighter['country'] = infoItem[1].string.rstrip(' ').rstrip('\n')
-				log('Country: %s' % fighter['country'])
+				self.__logger.log('Country: %s' % fighter['country'])
 		
-		log('##### Finished getting fighter details ####')
+		self.__logger.log('##### Finished getting fighter details ####')
 		return fighter
 
-		def getHtml(url):
-			try:
-				client = urlopen(url)
-				data = client.read()
-				client.close()
-			except:
-				log('Error getting data from: %s' % url)
-			else:
-				log('Retrieved URL: %s' % url)
-				return data
+	def getHtml(self, url):
+		"""
+                This function will retrieve and return html for a given url
+
+                name: getHtml 
+                @param url
+                @return html
+                """
+		
+		try:
+			client = urlopen(url)
+			data = client.read()
+			client.close()
+		except:
+			self.__logger.log('Error getting data from: %s' % url)
+		else:
+			self.__logger.log('Retrieved URL: %s' % url)
+		
+			return data
 
 #			def writeFighterThumb(fighter, fighterDir):
 #			fighterThumb = fighter['ID'] + '.jpg'
