@@ -3,10 +3,9 @@ import os
 from urllib2 import urlopen
 from BeautifulSoup import BeautifulSoup
 
-__author__ = "Jason Harmon (jason@wheelspecs.com)"
+__author__ = "Martijn Kaijser"
 __version__ = "0.0.1"
-__copyright__ = "Copyright (c) 2012 Jason Harmon"
-__license__ = "New-style BSD"
+__license__ = "GPLv2"
 
 class SherdogScraper:
 	def __init__(self, logger):
