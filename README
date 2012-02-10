@@ -1,1 +1,3 @@
 This is a reusable python library for scraping Event and Fighter info from Sherdog.com. 
+
+Basically all credit goes to https://github.com/paddycarey/plugin.video.mmabrowser, as the actual working code was forked from that project. This is just a repackage to make this reusable for my own ends. Thanks paddycarey!
