@@ -1,3 +1,39 @@
 This is a reusable python library for scraping Event and Fighter info from Sherdog.com. 
 
 Basically all credit goes to https://github.com/paddycarey/plugin.video.mmabrowser, as the actual working code was forked from that project. This is just a repackage to make this reusable for my own ends. Thanks paddycarey!
+
+Usage:
+s = new Sherdog(log) # This is any implementation of a logger...must have a .log(str) method
+s.getFighterDetails(2326) # This is Mirko Filipovic, note the ID from his Sherdog page: http://www.sherdog.com/fighter/Mirko-Filipovic-2326
+
+Data retrieved from this call:
+Retrieved URL: http://www.sherdog.com/fightfinder/fightfinder.asp?eventID=18346
+Title: UFC 141 - Lesnar vs. Overeem
+Promotion: Ultimate Fighting Championship
+Date: 2011-12-30
+Venue: MGM Grand Garden Arena
+City: Las Vegas, Nevada, United States
+Fight 1: 25981 vs. 5185 = winner: 25981
+Fight 2: 24765 vs. 16555 = winner: 24765
+Fight 3: 16374 vs. 573 = winner: 16374
+Fight 4: 26070 vs. 7540 = winner: 26070
+Fight 5: 11884 vs. 10380 = winner: 11884
+Fight 6: 48046 vs. 5778 = winner: 48046
+Fight 7: 26162 vs. 435 = winner: 26162
+Fight 8: 24539 vs. 4865 = winner: 24539
+Fight 9: 11451 vs. 15105 = winner: 11451
+Fight 10: 461 vs. 17522 = winner: 461
+
+
+s.getEventDetails(18346) # This is UFC 141, note the ID from the Sherdog page: sherdog.com/events/UFC-141-Lesnar-vs-Overeem-18346   
+
+Data retrieved from this call:
+Retrieved URL: http://www.sherdog.com/fightfinder/fightfinder.asp?fighterID=2326
+Name: Mirko Filipovic
+Nickname: Cro Cop
+Association: Cro Cop Squad Gym
+Height: 6'2" (188cm)
+Weight: 227lbs (103kg)
+DOB: 10-09-1974
+City: Zagreb
+Country: Croatia
