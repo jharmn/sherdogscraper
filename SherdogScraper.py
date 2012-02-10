@@ -178,11 +178,3 @@ class SherdogScraper:
 			self.__logger.log('Retrieved URL: %s' % url)
 		
 			return data
-
-#			def writeFighterThumb(fighter, fighterDir):
-#			fighterThumb = fighter['ID'] + '.jpg'
-#			thumbPath = os.path.join(fighterDir, fighterThumb)
-#			if not xbmcvfs.exists(thumbPath):
-#				thumbUrl = soup.find("span", {"id" : "fighter_picture"}).img['src']
-#				if not thumbUrl == 'http://www.cdn.sherdog.com/fightfinder/Pictures/blank_fighter.jpg':
-#					downloadFile(thumbUrl, thumbPath)
