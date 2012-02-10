@@ -2,8 +2,8 @@ This is a reusable python library for scraping Event and Fighter info from Sherd
 
 Basically all credit goes to https://github.com/paddycarey/plugin.video.mmabrowser, as the actual working code was forked from that project. This is just a repackage to make this reusable for my own ends. Thanks paddycarey!
 
-Usage:
-s = new Sherdog(log) # This is any implementation of a logger...must have a .log(str) method
+Usage (after dropping in SherdogScraper.py and importing):
+s = new Sherdog(log) # 'log' is any implementation of a logger...must have a .log(str) method
 s.getFighterDetails(2326) # This is Mirko Filipovic, note the ID from his Sherdog page: http://www.sherdog.com/fighter/Mirko-Filipovic-2326
 
 Data retrieved from this call:
