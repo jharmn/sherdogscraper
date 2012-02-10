@@ -90,7 +90,7 @@ class SherdogScraper:
 		self.__logger.log('###### Finished getting event details #####')
 		return event
 
-	def getFighterDetails(sherdogFighterID):
+	def getFighterDetails(self, sherdogFighterID):
 
 		"""
 		This function will retrieve and return all event details from sherdog.com for a given event ID.
