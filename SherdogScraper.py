@@ -1,179 +1,362 @@
 #!/usr/bin/env python
 import os
+import collections
+import datetime
 from urllib2 import urlopen
 from BeautifulSoup import BeautifulSoup
 
-__author__ = "Martijn Kaijser"
 __version__ = "0.0.1"
 __license__ = "GPLv2"
 
 class SherdogScraper:
-	def __init__(self, logger):
-		self.__logger = logger
 
-	def getEventDetails(self, sherdogEventID):
+	# declare necessary constants for script operation
+	__fighterURL__ = 'http://www.sherdog.com/fighter/X-%s'
+	__eventURL__ = 'http://www.sherdog.com/events/X-%s'
+	__organizationURL__ = 'http://www.sherdog.com/organizations/X-%s'
+
+	def getOrganizationList(self):
+
+		"""
+		Returns a list of all of the organizations/promotions from sherdog.com's fightfinder
+		Returns:	
+		organizations - A list of dictionaries containing the fight organizations as scraped from sherdog.com
+		organizations fields:
+		ID -- Organization's ID
+		name -- Organizations's name
 		
 		"""
-		This function will retrieve and return all event details from sherdog.com for a given event ID.
+
+		organizations = []
+		url = self.__organizationURL__ % ''
 		
-		name: getEventDetails
-		@param sherdogEventID
-		@return event
-		"""
+		# retrieve html and initialise beautifulsoup object for parsing
+                soup = BeautifulSoup(self.getHtml(url))
 
-		self.__logger.log('########## Getting event details ##########')
-		event = {}
-		event['ID'] = sherdogEventID
-		self.__logger.log('ID: %s' % event['ID'])
-		url = 'http://www.sherdog.com/fightfinder/fightfinder.asp?eventID=%s' % sherdogEventID
-		soup = BeautifulSoup(self.getHtml(url))
-		event['title'] = soup.find("div", {"class" : "Txt30Blue Bold SpacerLeft8"}).h1.string
-		self.__logger.log('Title: %s' % event['title'])
-		event['promotion'] = soup.find("div", {"class" : "Txt13Orange Bold SpacerLeft8"}).a.string
-		self.__logger.log('Promotion: %s' % event['promotion'])
-		tempDate = soup.find("div", {"class" : "Txt13White Bold SpacerLeft8"}).string
-		tempYear = tempDate.split(' ')[2]
-		tempDay = "%.2d" % int(tempDate.split(' ')[1].rstrip(','))
-		tempMonth = tempDate.split(' ')[0]
-		if tempMonth == 'January': tempMonth = '01'
-		elif tempMonth == 'February': tempMonth = '02'
-		elif tempMonth == 'March': tempMonth = '03'
-		elif tempMonth == 'April': tempMonth = '04'
-		elif tempMonth == 'May': tempMonth = '05'
-		elif tempMonth == 'June': tempMonth = '06'
-		elif tempMonth == 'July': tempMonth = '07'
-		elif tempMonth == 'August': tempMonth = '08'
-		elif tempMonth == 'September': tempMonth = '09'
-		elif tempMonth == 'October': tempMonth = '10'
-		elif tempMonth == 'November': tempMonth = '11'
-		elif tempMonth == 'December': tempMonth = '12'
-		event['date'] = "%s-%s-%s" % (tempYear, tempMonth, tempDay)
-		self.__logger.log('Date: %s' % event['date'])
-		try:
-			event['venue'] = soup.find("div", {"class" : "Txt13Gray Bold SpacerLeftBottom8"}).findAll(text=True)[0].rstrip().rstrip(',')
-			self.__logger.log('Venue: %s' % event['venue'])
-		except:
-			event['venue'] = ''
-			self.__logger.log('Venue: Not Found')
-		try:
-			event['city'] = soup.find("div", {"class" : "Txt13Gray Bold SpacerLeftBottom8"}).findAll(text=True)[1].rstrip().lstrip()
-			self.__logger.log('City: %s' % event['city'])
-		except:
-			event['city'] = ''
-			self.__logger.log('City: Not Found')
-		table = soup.find("table", {"class" : "fight_event_card"})
-		event['fights'] = []
-		try:
-			rows = table.findAll('tr')
-			rowcount = 0
-			for row in rows:
-				if not rowcount == 0:
-					cols = row.findAll('td')
-					
-					fight = {}
-					fight['ID'] = cols[0].string
-					fight['fighter1'] = cols[1].a['href'].rsplit('-', 1)[1]
-					fight['fighter2'] = cols[3].a['href'].rsplit('-', 1)[1]
-					if cols[1].findAll(text=True)[1] == 'Winner':
-						fight['winner'] = cols[1].a['href'].rsplit('-', 1)[1]
-					else:
-						fight['winner'] = None
-					fight['result'] = cols[4].string
-					fight['round'] = cols[5].string
-					fight['time'] = cols[6].string
-					event['fights'].append(fight)
-					self.__logger.log('Fight %s: %s vs. %s' % (fight['ID'], fight['fighter1'], fight['fighter2']))
-				rowcount = rowcount + 1
-		except:
-			pass
+		# store the list of organizations
+		select = soup.html.find('select', { 'name' : 'organization_id'})
+		for option in select.findAllNext('option'):
+			organization = {}
+			organization['ID'] = option['value']
+			organization['name'] = option.string
+			organizations.append(organization)
+		return organizations
 
-		self.__logger.log('###### Finished getting event details #####')
-		return event
-
-	def getFighterDetails(self, sherdogFighterID):
+	def getEventList(self, organizationID):
 
 		"""
-		This function will retrieve and return all event details from sherdog.com for a given event ID.
-		
-		name: getEventDetails
-		@param sherdogEventID
-		@return event
+		Return list of events for a given organization ID from sherdog.com's fightfinder
+		Returns:
+		events - A list of all of the events for the given Organization
+
+		events fields:
+		ID -- Event's ID
+		Date -- The date of the event
+		Title -- The title of the event
+		Location -- Where the event took place
+
 		"""
 
-		self.__logger.log('######### Getting fighter details #########')
+		events = []
 
-		fighter = {}
-		fighter['ID'] = ''
-		fighter['name'] = ''
-		fighter['nickName'] = ''
-		fighter['association'] = ''
-		fighter['height'] = ''
-		fighter['weight'] = ''
-		fighter['birthYear'] = ''
-		fighter['birthDay'] = ''
-		fighter['birthMonth'] = ''
-		fighter['city'] = ''
-		fighter['country'] = ''
+		# generate event url
+		url = self.__organizationURL__ % organizationID
+	
+		# retrieve html and initialise beautifulsoup object for parsing
+                soup = BeautifulSoup(self.getHtml(url))
 
-		url = 'http://www.sherdog.com/fightfinder/fightfinder.asp?fighterID=%s' % sherdogFighterID
-
-		fighter['ID'] = sherdogFighterID
-		self.__logger.log('ID: %s' % fighter['ID'])
-
-		soup = BeautifulSoup(self.getHtml(url))
-
-		table = soup.find("span", {"id" : "fighter_profile"})
-		rows = table.findAll('tr')
+		# find events from table
+		table = soup.find("table", {"class" : "event"})
+		rows = table.findAll("tr")
+		rowcount = 0
 		for row in rows:
-			infoItem = row.findAll('td')
-			if infoItem[0].string == None:
-				continue
-			if infoItem[0].string.rstrip(' ').rstrip('\n') == 'Name':
-				fighter['name'] = infoItem[1].string.rstrip(' ').rstrip('\n')
-				self.__logger.log('Name: %s' % fighter['name'])
-			if infoItem[0].string.rstrip(' ').rstrip('\n') == 'Nick Name':
-				fighter['nickName'] = infoItem[1].string.rstrip(' ').rstrip('\n')
-				self.__logger.log('Nickname: %s' % fighter['nickName'])
-			if infoItem[0].string.rstrip(' ').rstrip('\n') == 'Association':
-				fighter['association'] = infoItem[1].a.string.rstrip(' ').rstrip('\n')
-				self.__logger.log('Association: %s' % fighter['association'])
-			if infoItem[0].string.rstrip(' ').rstrip('\n') == 'Height':
-				fighter['height'] = infoItem[1].string.rstrip(' ').rstrip('\n')
-				self.__logger.log('Height: %s' % fighter['height'])
-			if infoItem[0].string.rstrip(' ').rstrip('\n') == 'Weight':
-				fighter['weight'] = infoItem[1].string.rstrip(' ').rstrip('\n')
-				self.__logger.log('Weight: %s' % fighter['weight'])
-			if infoItem[0].string.rstrip(' ').rstrip('\n') == 'Birth Date':
-				fighter['birthYear'] = infoItem[1].string.rstrip(' ').rstrip('\n').split('-')[0]
-				fighter['birthMonth'] = infoItem[1].string.rstrip(' ').rstrip('\n').split('-')[1]
-				fighter['birthDay'] = infoItem[1].string.rstrip(' ').rstrip('\n').split('-')[2]
-				self.__logger.log('DOB: %s-%s-%s' % (fighter['birthDay'], fighter['birthMonth'], fighter['birthYear']))
-			if infoItem[0].string.rstrip(' ').rstrip('\n') == 'City':
-				fighter['city'] = infoItem[1].string.rstrip(' ').rstrip('\n')
-				self.__logger.log('City: %s' % fighter['city'])
-			if infoItem[0].string.rstrip(' ').rstrip('\n') == 'Country':
-				fighter['country'] = infoItem[1].string.rstrip(' ').rstrip('\n')
-				self.__logger.log('Country: %s' % fighter['country'])
+			if rowcount > 0:	
+				cells = row.findAll("td")
+				id = cells[1].a['href'].rsplit("-")[1]
+				month = row.find("span", {"class" : "month"}).string
+				day = row.find("span", {"class" : "day"}).string
+				year = row.find("span", {"class" : "year"}).string
+				tempDate = "%s %s, %s" % (month, day, year)
+				eventDate = datetime.datetime.strptime(tempDate, '%b %d, %Y')
+				name = cells[1].findAll(text=True)[0].string
+				location = cells[2].findAll(text=True)[0].string
+				events.append({'ID' : id, 'date' : eventDate, 'name': name, 'location': location})
+			rowcount = rowcount + 1
+		return events
+
+
+	def getEventDetails(self, eventID):
 		
-		self.__logger.log('##### Finished getting fighter details ####')
-		return fighter
+		"""
+		Return event details for a given event ID from sherdog.com's fightfinder.
+		
+		Arguments:
+		eventID -- A String containing the event's numeric event ID from sherdog.com
+		
+		Returns:
+		eventDetails -- A dictionary containing the events details as scraped from sherdog.com.
+		
+		eventDetails keys:
+		ID -- Event's ID
+		title -- Event's full title
+		promotion -- Promotion which ran the event
+		date -- Date of event (YYYY-MM-DD)
+		venue -- Event's venue
+		city -- City in which event took place
+		fights -- A list containing dictionaries (fightDetails[]) with the details of each fight on the event
+	
+		fightDetails keys:
+		ID -- Fight's ID
+		fighter1 -- Sherdog ID for the first fighter
+		fighter2 -- Sherdog ID for the second fighter
+		winner -- Sherdog ID for the winning fighter
+		result -- Method of victory/Type of decision
+		referee -- Referee that presided over the fight
+		round -- Round in which fight ended
+		time -- Time at which final round ended
+		"""
+		
+		# initialise empty dict to store event details
+		eventDetails = {}
+		
+		# store event ID in dict
+		eventDetails['ID'] = eventID
+		
+		# generate event url
+		url = self.__eventURL__ % eventID
+		
+		# retrieve html and initialise beautifulsoup object for parsing
+		soup = BeautifulSoup(self.getHtml(url))
+		
+		pageTitle = soup.html.head.title.string
+		pageTitleArr = pageTitle.split(' - ', 1)	
+		# find and store event title in dict
+		eventDetails['title'] = pageTitle
+		
+		# find and store promotion name in dict
+		eventDetails['promotion'] = pageTitleArr[0]
+		
+		# find events date
+		tempDate = soup.find("div", {"class" : "authors_info"}).find("span", {"class" : "date"}).string
+		
+		# store event date in dict
+		eventDetails['date'] = datetime.datetime.strptime(tempDate, '%b %d, %Y') 
+		eventTemp = ''
+		try:
+			# find and store venue in dict
+			eventTemp = soup.find("span", {"class" : "author"}).findAll(text=True)[0].split("\r\n")
+			eventDetails['venue'] = eventTemp[0].lstrip().rstrip(",")
+		except:
+			# store blank string if no venue listed
+			eventDetails['venue'] = ''
+		
+		try:
+			# find and store city in dict
+			eventDetails['city'] = eventTemp[1].lstrip().rstrip() 
+		except:
+			# store blank string if no city listed
+			eventDetails['city'] = ''
+		
+		# find list of fights for event
+		table = soup.find("div", {"class" : "module_fight_card"})
+		
+		# initialise empty list to store fightDetails dicts
+		eventDetails['fights'] = []
+	
+		
+		fightDetails = {}
+		fights = []
+		fightDetails['fighter1'] = soup.find("div", {"class" : "fighter left_side"}).a['href'].rsplit("-", 1)[1]
+		fightDetails['fighter2'] = soup.find("div", {"class" : "fighter right_side"}).a['href'].rsplit("-", 1)[1]
+
+		leftResult = ''
+		rightResult = ''
+		winner = ''
+		leftResult = soup.find("div", {"class" : "fighter left_side"}).find("span", {"class" : "final_result win"})
+		rightResult = soup.find("div", {"class" : "fighter right_side"}).find("span", {"class" : "final_result win"})
+		
+		if leftResult != None and leftResult.string == 'win':
+			fightDetails['winner'] = fightDetails["fighter1"]
+		if rightResult != None and leftResult.string == 'win':
+			fightDetails['winner'] = fightDetails["fighter2"]
+		
+		tempCells =  soup.find("table", {"class" : "resume"}).findAll("td")
+		fightDetails['ID'] = int(tempCells[0].findAll(text=True)[1].strip())
+		fightDetails['result'] = tempCells[1].findAll(text=True)[1].strip()
+		fightDetails['referee'] = tempCells[2].findAll(text=True)[1].strip()
+		fightDetails['round'] = tempCells[3].findAll(text=True)[1].strip()
+		fightDetails['time'] = tempCells[4].findAll(text=True)[1].strip()
+		fights.append(fightDetails)
+
+		# find all rows in the fights table
+		rows = soup.find("div", {"class" : "content table"}).findAll("tr")
+		
+		# set rowcount to 0
+		rowcount = 0
+			
+		# loop through all rows in fights table
+		for row in rows:
+			
+			# ignore first row in table
+			if not rowcount == 0:
+				
+				# find all columns in table
+				cols = row.findAll('td')
+				
+				# initialise empty dict to store fight details
+				fightDetails = {}
+				
+				# find and store fight ID
+				fightDetails['ID'] = int(cols[0].string)
+				
+				# find and store ID for fighter1
+				fightDetails['fighter1'] = cols[1].a['href'].rsplit('-', 1)[1]
+				# find and store ID for fighter2
+				fightDetails['fighter2'] = cols[5].a['href'].rsplit('-', 1)[1]
+				
+				# check that fight was not a draw
+				win = cols[1].find("span").find(text=True)
+				if win == 'win':
+					# find and store winner ID
+					fightDetails['winner'] = fightDetails['fighter1']
+				else:
+					# store blank string if no winner
+					fightDetails['winner'] = ''
+				
+				# find and store result
+				fightDetails['result'] = cols[6].find(text=True).string
+				
+				# find and store round in which fight ended
+				fightDetails['referee'] = cols[6].find("span").string
+				
+				# find and store round in which fight ended
+				fightDetails['round'] = cols[7].string
+				
+				# find and store end time of fight
+				fightDetails['time'] = cols[8].string
+				
+				# add fightDetails dict to fights list
+				fights.append(fightDetails)
+			
+			# increase rowcount by 1
+			rowcount = rowcount + 1
+	
+		sort_on = "ID"
+		sortFights = [(dict_[sort_on], dict_) for dict_ in fights]
+		sortFights.sort()
+		eventDetails['fights'] = [dict_ for (key, dict_) in sortFights]
+		# return the scraped details
+		return eventDetails
+
+
+	def getFighterDetails(self, fighterID):
+		
+		"""
+		Return fighter details for a given fighter ID from sherdog.com's fightfinder.
+		
+		Arguments:
+		fighterID -- A String containing the fighter's numeric ID from sherdog.com
+		
+		Returns:
+		fighterDetails -- A dictionary containing the fighters details as scraped from sherdog.com
+		
+		fighterDetails keys:
+		ID -- Fighter's ID
+		name -- Fighter's full name
+		nickName -- Fighter's current nickname
+		association -- Fighter's current camp/association
+		height -- Fighter's height
+		weight -- Fighter's weight (in lbs)
+		birthDate -- Fighter's date of birth
+		city -- Fighter's city of birth
+		country -- Fighter's country of birth
+		thumbUrl -- URL of fighter image
+		"""
+		
+		# initialise empty dict to store fighter details
+		fighterDetails = {}
+		# set all keys to empty values
+		fighterDetails['ID'] = ''
+		fighterDetails['name'] = ''
+		fighterDetails['nickName'] = ''
+		fighterDetails['association'] = ''
+		fighterDetails['height'] = ''
+		fighterDetails['weight'] = ''
+		fighterDetails['birthDate'] = ''
+		fighterDetails['city'] = ''
+		fighterDetails['country'] = ''
+		
+		# store fighter ID in dict
+		fighterDetails['ID'] = fighterID
+		
+		# generate fighter url
+		url = self.__fighterURL__ % fighterID
+		
+		# retrieve html and initialise beautifulsoup object for parsing
+		soup = BeautifulSoup(self.getHtml(url))
+
+		bio = soup.find("div", {"class" : "module bio_fighter"})	
+		fighterDetails['name'] = bio.h1.find(text=True)
+		try:
+			fighterDetails['nickName'] = bio.find("span", {"class" : "nickname"}).em.string
+		except Exception:
+			fighterDetails['nickName'] = ''
+		try:
+			fighterDetails['association'] = bio.find("span", {"class" : "item association"}).strong.string
+			heightTemp = bio.find("span", {"class" : "item height"})
+		except Exception:
+			fighterDetails['association'] = ''
+		fighterDetails['height'] = ("%s %s" % (heightTemp.strong.string, heightTemp.findAll(text=True)[3].string)).rstrip()
+		weightTemp = bio.find("span", {"class" : "item weight"})
+		fighterDetails['weight'] = ("%s %s" % (weightTemp.strong.string, weightTemp.findAll(text=True)[3].string)).rstrip() 
+		fighterDetails['birthDate'] = bio.find("span", {"class" : "item birthday"}).findAll(text=True)[0].rsplit(":")[1].strip()
+		try:
+			birthpTemp =  bio.find("span", {"class" : "item birthplace"})
+			fighterDetails['city'] = birthpTemp.findAll(text=True)[1].strip()
+			fighterDetails['country'] = birthpTemp.strong.string
+		except Exception:
+			fighterDetails['city'] = ''
+			fighterDetails['country'] = ''
+		""" Commented
+			# check if row contains 'city' and store to fighterDetails dict
+			elif infoItem[0].string.rstrip(' ').rstrip('\n') == 'City':
+				fighterDetails['city'] = infoItem[1].string.rstrip(' ').rstrip('\n')
+
+			# check if row contains 'country' and store to fighterDetails dict
+			elif infoItem[0].string.rstrip(' ').rstrip('\n') == 'Country':
+				fighterDetails['country'] = infoItem[1].string.rstrip(' ').rstrip('\n')
+			
+			# find and store url for fighter image
+			fighterDetails['thumbUrl'] = soup.find("span", {"id" : "fighter_picture"}).img['src']
+		"""	
+		# return scraped details
+		return fighterDetails
+
 
 	def getHtml(self, url):
+		
 		"""
-                This function will retrieve and return html for a given url
+		Retrieve and return remote resource as string
+		
+		Arguments:
+		url -- A string containing the url of a remote page to retrieve
+		
+		Returns:
+		data -- A string containing the contents to the remote page
+		"""
 
-                name: getHtml 
-                @param url
-                @return html
-                """
+
+		#print 'Retrieving: '+url
+	
+		# connect to url using urlopen
+		client = urlopen(url)
 		
-		try:
-			client = urlopen(url)
-			data = client.read()
-			client.close()
-		except:
-			self.__logger.log('Error getting data from: %s' % url)
-		else:
-			self.__logger.log('Retrieved URL: %s' % url)
+		# read data from page
+		data = client.read()
 		
-			return data
+		# close connection to url
+		client.close()
+
+		# return the retrieved data
+		return data
+
