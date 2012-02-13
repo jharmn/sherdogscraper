@@ -2,6 +2,7 @@
 import os
 import collections
 import datetime
+import urllib
 from urllib2 import urlopen
 from BeautifulSoup import BeautifulSoup
 
@@ -12,6 +13,7 @@ class SherdogScraper:
 
 	# declare necessary constants for script operation
 	__fighterURL__ = 'http://www.sherdog.com/fighter/X-%s'
+	__fighterSearchURL__ = 'http://www.sherdog.com/stats/fightfinder?weight=%s&SearchTxt=%s'
 	__eventURL__ = 'http://www.sherdog.com/events/X-%s'
 	__organizationURL__ = 'http://www.sherdog.com/organizations/X-%s'
 
@@ -41,6 +43,7 @@ class SherdogScraper:
 			organization['name'] = option.string
 			organizations.append(organization)
 		return organizations
+
 
 	def getEventList(self, organizationID):
 
@@ -248,6 +251,60 @@ class SherdogScraper:
 		# return the scraped details
 		return eventDetails
 
+
+	def getFighterSearch(self, query, weightClass):
+			
+		"""
+		Return a list of fightrs based on the query and weight class provided
+		
+		Arguments:
+		query -- A string containing the search for a fighters first, last, or nick name
+		weightClass -- Optional: the weight class ID to search in
+		11 = Catch Weight
+		10 = Flyweight
+		9 = Bantamweight
+		7 = Featherweight
+		8 = Pound for Pound
+		6 = Lightweight
+		5 = Welterweight
+		4 = Middleweight
+		3 = Light Heavyweight
+		2 = Heavyweight
+		1 = Super Heavyweight
+
+		Returns:
+		fighters -- A list of fighters
+
+		fighters keys:
+		ID --  Fighter's ID
+		name -- Fighter's full name
+		nickName --  Fighter's current nickname
+		association -- Fighter's current camp/association
+                height -- Fighter's height
+                weight -- Fighter's weight (in lbs)
+		"""
+
+		# generate fighter url
+                url = self.__fighterSearchURL__ % (urllib.quote_plus(query), weightClass)
+
+                # retrieve html and initialise beautifulsoup object for parsing
+                soup = BeautifulSoup(self.getHtml(url))
+
+		rows = soup.find("table", {"class" : "fightfinder_result"}).findAll("tr")
+		rowCount = 0
+		fighters = []
+		for row in rows:
+			if rowCount > 0:
+				cells = row.findAll("td")
+				fighter = {}
+				fighter['ID'] = cells[1].a['href'].rsplit("-")[1]
+				fighter['name'] = cells[1].a.string
+				fighter['height'] = "%s %s" % (cells[2].strong, cells[2].find(text=True))
+				fighter['weight'] = "%s %s" % (cells[3].strong, cells[3].find(text=True))
+				fighter['association'] = cells[4].string
+				fighters.append(fighter)
+			rowCount = rowCount + 1
+		return fighters
 
 	def getFighterDetails(self, fighterID):
 		

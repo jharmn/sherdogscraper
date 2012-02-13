@@ -22,6 +22,14 @@ class TestSherdogScraper(unittest.TestCase):
         self.assertEqual(event['name'], 'TUF 15 - The Ultimate Fighter 15 Finale')
         self.assertEqual(event['location'], 'Las Vegas, Nevada, United States')
 
+  def test_fighterSearch(self):
+    f = self.s.getFighterSearch('', 'rich+franklin')
+    self.assertEqual(len(f), 1)
+    self.assertEqual(f[0]['name'], 'Rich Franklin')
+    f = self.s.getFighterSearch('6', 'mitchell')
+    self.assertEqual(len(f), 7)
+    self.assertEqual(f[0]['name'], 'Billy Mitchell')
+
   def test_fighter(self):
     f = self.s.getFighterDetails(2326)
     self.assertEqual(f['name'], 'Mirko Filipovic')
